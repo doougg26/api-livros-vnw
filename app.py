@@ -1,16 +1,18 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import sqlite3
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 def init_db():
     with sqlite3.connect('database.db') as conn:
         conn.execute("""CREATE TABLE IF NOT EXISTS livros(
-                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                     titulo TEXT NOT NULL,
-                     categoria TEXT NOT NULL,
-                     autor TEXT NOT NULL,
-                     imagem_url TEXT NOT NULL)
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    titulo TEXT NOT NULL,
+                    categoria TEXT NOT NULL,
+                    autor TEXT NOT NULL,
+                    imagem_url TEXT NOT NULL)
                     """)
         print("Banco de dados inicializado com sucesso!")
 
@@ -19,13 +21,7 @@ init_db()
 
 @app.route('/')
 def homepage():
-    return """ <h1> Bem vindo a API Livros VNW</h1>
-                <p>Esta API permite que voce execute processos de cadastro e consulta de livros.</p>
-                <h2>Rotas disponíveis:</h2>
-                <ul>
-                    <li><span style="background-color:red; color:white;">POST</span> <strong>/doar :</strong> Adiciona um novo livro no banco de dados.</li>
-                    <li><span style="background-color:green; color:white;">GET</span> <strong>/livros :</strong> Consulta os livros cadastrados no banco de dados.</li>
-                </ul>"""
+    return render_template('index.html')
 
 @app.route('/doar', methods=['POST'])
 def doar():
@@ -36,22 +32,23 @@ def doar():
     autor = dados.get('autor')
     imagem_url = dados.get('imagem_url')
 
-    if not all ([titulo, categoria, autor, imagem_url]):
+    if not all([titulo, categoria, autor, imagem_url]):
         return jsonify({'erro':'todos os campos são obrigatórios'}), 400
     
     with sqlite3.connect('database.db') as conn:
-        conn.execute(f""" INSERT INTO livros (titulo, categoria, autor, imagem_url) values (?,?,?,?) """,(titulo,categoria,autor,imagem_url))
-
+        conn.execute(f"""  INSERT INTO livros (titulo, categoria, autor, imagem_url) values (?,?,?,?)""",(titulo,categoria,autor,imagem_url))
+        
         conn.commit()
 
-        return jsonify({'mensagem':'livro cadastrado com sucesso'}), 201
-    
+        return jsonify({'mensagem': 'livros cadastrados com sucesso'}), 201
+
 @app.route('/livros', methods=['GET'])
-def consulta_livros():
+def listar_livros():
     with sqlite3.connect('database.db') as conn:
         livros = conn.execute("SELECT * FROM livros").fetchall()
-        
+    
     livros_formatados =[]
+    
     for livro in livros:
         dicionario_livros ={
             'id':livro[0],
@@ -62,6 +59,18 @@ def consulta_livros():
         }
         livros_formatados.append(dicionario_livros)
     return jsonify(livros_formatados)
+
+@app.route('/livros/<int:livro_id>', methods=['DELETE'])
+def deletar_livros(livro_id):
+    with sqlite3.connect('database.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM livros WHERE id = ?', (livro_id,))
+        conn.commit()
+
+    if cursor.rowcount == 0:
+        return jsonify({'mensagem':'livro não encontrado'}),400
+    
+    return jsonify({'mensagem':'livro excluido'}),200
 
 if __name__ == "__main__":
     app.run(debug=True)
