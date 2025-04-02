@@ -42,3 +42,5 @@ python app.py
  ```
 
 > A API estará disponivel no seu computador local em [http://127.0.0.1:5000](http://127.0.0.1:5000)
+
+>Documentação completa no [Postman](https://documenter.getpostman.com/view/43110445/2sAYkLnd4Z) 
